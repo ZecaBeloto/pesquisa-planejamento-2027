@@ -55,6 +55,8 @@ Foi tentado o Google Forms, mas ele não impede que percentuais em campos separa
 
 ## Perguntas
 
+> **Atualização de 30/10/2026:** as perguntas vigentes estão em `shared/questions.js` (18 perguntas). O gestor trocou "meta" por "objetivo", reduziu a origem da captação a três opções, retirou o AuC atual, ampliou as classes de ativos para oito, acrescentou o perfil de cliente ideal e substituiu NPS e frequência por três perguntas sobre a régua de relacionamento. A lista abaixo registra o escopo original.
+
 Numeração do escopo original, em quatro blocos. Todas são obrigatórias, exceto quando indicado. Antes dos blocos há o campo obrigatório "Nome do assessor".
 
 ### Bloco 1: Metas quantitativas e expansão de carteira
