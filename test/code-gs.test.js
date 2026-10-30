@@ -80,15 +80,16 @@ const answers = (nome) => ({
   q1: '10',
   q2_contas: '12',
   q2_ticket: '10',
-  q3: { indicacoes: '100', prospeccao: '0', parcerias: '0', leads: '0' },
-  q4_atual: '1',
+  q3: { indicacoes: '100', prospeccao: '0', eventos: '0' },
   q4_meta: '2',
+  q_perfil: 'x',
   q5: '1',
-  q6: { rf: '1', rv: '2', fundos: '3', prev: '4', recorrente: '5' },
+  q6: { rf: '1', rv: '2', consorcios: '3', prev: '4', recorrente: '5', internacional: '6', pj: '7', credito: '8' },
   q7: { fee: '100', transacional: '0' },
   q8: [],
-  q9_nps: '80',
-  q9_freq: 'Mensal',
+  q_regua: 'Sim',
+  q_segmentacao: 'x',
+  q_regua_nota: '8',
   q10: '1',
   q11: 'x',
   q12: ['Ferramentas de CRM / automação de follow-up'],
@@ -155,7 +156,7 @@ test('Média de inteiros mostra decimal, sem arredondar', () => {
   post(w, 'a', answers('Ana'));
   post(w, 'b', answers('Bruno'));
   const c = w.ss.getSheetByName('Consolidado');
-  const rowOf = c.rows.findIndex((r) => String(r[0]).startsWith('14. ')) + 1;
+  const rowOf = c.rows.findIndex((r) => String(r[0]).startsWith('17. ')) + 1;
   const width = c.rows[0].length;
   const f = w.formats.filter((x) => x.sheet === 'Consolidado' && x.r === rowOf).slice(-2);
   assert.deepEqual(f.map((x) => [x.c, x.nc, x.f]), [[2, width - 2, '0'], [width, 1, '0.0']]);

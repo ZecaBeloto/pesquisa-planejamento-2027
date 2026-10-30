@@ -8,16 +8,17 @@ const validAnswers = () => ({
   q1: '25.000.000,00',
   q2_contas: '24',
   q2_ticket: 'R$ 350.000,00',
-  q3: { indicacoes: '40', prospeccao: '30', parcerias: '20', leads: '10' },
-  q4_atual: '100000000',
+  q3: { indicacoes: '40', prospeccao: '30', eventos: '30' },
   q4_meta: '150.000.000,00',
+  q_perfil: 'Médico, renda alta',
   q5: '0,75',
-  q6: { rf: '1', rv: '2', fundos: '3', prev: '4', recorrente: '5' },
+  q6: { rf: '1', rv: '2', consorcios: '3', prev: '4', recorrente: '5', internacional: '6', pj: '7', credito: '8' },
   q7: { fee: '60', transacional: '40' },
   q8: [],
   q8_volume: '',
-  q9_nps: '80',
-  q9_freq: 'Mensal',
+  q_regua: 'Sim',
+  q_segmentacao: 'Por patrimônio',
+  q_regua_nota: '8',
   q10: '3,5',
   q11: 'Rotina de indicação',
   q12: ['Ferramentas de CRM / automação de follow-up'],
@@ -129,7 +130,7 @@ test('nome é obrigatório', () => {
 
 test('pergunta 3 exige soma de 100', () => {
   const a = validAnswers();
-  a.q3.leads = '0';
+  a.q3.eventos = '0';
   assert.ok(L.validateBlock(blockOf('metas'), a).q3);
 });
 
@@ -141,7 +142,7 @@ test('pergunta 7 exige soma de 100', () => {
 
 test('grupo de percentual aceita valores quebrados', () => {
   const a = validAnswers();
-  a.q3 = { indicacoes: '33,33', prospeccao: '33,33', parcerias: '33,34', leads: '0' };
+  a.q3 = { indicacoes: '33,33', prospeccao: '33,33', eventos: '33,34' };
   assert.equal(L.validateBlock(blockOf('metas'), a).q3, undefined);
 });
 
@@ -153,12 +154,14 @@ test('ranking não aceita posição repetida nem faltando', () => {
   assert.ok(L.validateBlock(blockOf('rentabilidade'), a).q6);
 });
 
-test('NPS fica entre 0 e 100', () => {
+test('nota da régua fica entre 0 e 10', () => {
   const a = validAnswers();
-  a.q9_nps = '101';
-  assert.ok(L.validateBlock(blockOf('qualidade'), a).q9_nps);
-  a.q9_nps = '100';
-  assert.equal(L.validateBlock(blockOf('qualidade'), a).q9_nps, undefined);
+  a.q_regua_nota = '11';
+  assert.ok(L.validateBlock(blockOf('qualidade'), a).q_regua_nota);
+  a.q_regua_nota = '10';
+  assert.equal(L.validateBlock(blockOf('qualidade'), a).q_regua_nota, undefined);
+  a.q_regua_nota = '0';
+  assert.equal(L.validateBlock(blockOf('qualidade'), a).q_regua_nota, undefined);
 });
 
 test('pergunta 8: vazia é aceita, mas opção marcada exige volume', () => {
@@ -188,8 +191,8 @@ test('pergunta 13: Nenhuma não combina com outras', () => {
 
 test('opção fora da lista é recusada', () => {
   const a = validAnswers();
-  a.q9_freq = 'Semanal';
-  assert.ok(L.validateSubmission(a).q9_freq);
+  a.q_regua = 'Talvez';
+  assert.ok(L.validateSubmission(a).q_regua);
   const b = validAnswers();
   b.q13 = ['Inventada'];
   assert.ok(L.validateSubmission(b).q13);
@@ -210,12 +213,12 @@ test('buildTabRows grava números como número e separa campos', () => {
   assert.deepEqual(rows[0], ['Pergunta', 'Resposta', 'Enviado em']);
   const get = (prefix) => rows.find((r) => String(r[0]).startsWith(prefix))[1];
   assert.strictEqual(get('1. '), 25000000);
-  assert.strictEqual(get('2. Abertura de contas: Meta de contas'), 24);
+  assert.strictEqual(get('2. Abertura de contas: Objetivo de contas'), 24);
   assert.strictEqual(get('2. Abertura de contas: Ticket médio'), 350000);
   assert.strictEqual(get('3. Origem da captação: Indicações'), 40);
-  assert.strictEqual(get('5. '), 0.75);
-  assert.strictEqual(get('6. Prioridade de alocação: Renda Fixa'), 1);
-  assert.equal(get('13. '), 'CEA');
+  assert.strictEqual(get('6. '), 0.75);
+  assert.strictEqual(get('7. Prioridade de alocação: Renda Fixa'), 1);
+  assert.equal(get('16. '), 'CEA');
   assert.equal(rows[1][2], '30/10/2026 10:00');
 });
 
@@ -223,21 +226,21 @@ test('buildTabRows neutraliza fórmula em texto aberto', () => {
   const a = validAnswers();
   a.q15 = '=HYPERLINK("x")';
   const rows = L.buildTabRows(a, 'd');
-  assert.equal(rows.find((r) => r[0].startsWith('15. '))[1], '\'=HYPERLINK("x")');
+  assert.equal(rows.find((r) => r[0].startsWith('18. '))[1], '\'=HYPERLINK("x")');
 });
 
 test('Outro com ponto e vírgula não quebra a contagem', () => {
   const a = validAnswers();
   a.q12_outro = 'a; b';
   const rows = L.buildTabRows(a, 'd');
-  const row = rows.find((r) => r[0].startsWith('12. '));
+  const row = rows.find((r) => r[0].startsWith('15. '));
   assert.equal(row[1], 'Ferramentas de CRM / automação de follow-up; Outro: a, b');
 });
 
 const tab = (name, patch) => ({ name, rows: L.buildTabRows(Object.assign(validAnswers(), patch), 'd') });
 
 test('buildConsolidado monta o modelo A', () => {
-  const { values, rowKinds } = L.buildConsolidado([tab('Ana'), tab('Bruno', { q1: '10', q13: ['CEA', 'CFP®'], q9_freq: 'Mensal' })]);
+  const { values, rowKinds } = L.buildConsolidado([tab('Ana'), tab('Bruno', { q1: '10', q13: ['CEA', 'CFP®'] })]);
   assert.deepEqual(values[0], ['Pergunta', 'Ana', 'Bruno', 'Total', 'Média']);
   assert.equal(rowKinds[1], 'block');
   assert.ok(String(values[1][0]).startsWith('Bloco 1'));
@@ -249,21 +252,23 @@ test('buildConsolidado monta o modelo A', () => {
   assert.equal(r1[3], `=SUM(B${n}:C${n})`);
   assert.equal(r1[4], `=AVERAGE(B${n}:C${n})`);
 
-  const roa = row('5. ');
+  const roa = row('6. ');
   assert.equal(roa[3], '–');
   assert.ok(String(roa[4]).startsWith('=AVERAGE('));
 
-  const rank = row('6. Prioridade de alocação: Renda Fixa');
+  const rank = row('7. Prioridade de alocação: Renda Fixa');
   assert.equal(rank[3], '–');
   assert.ok(String(rank[4]).startsWith('=AVERAGE('));
 
-  const cert = row('13. ');
+  const cert = row('16. ');
   assert.equal(cert[3], 'CEA: 2; CFP®: 1');
   assert.equal(cert[4], '–');
 
-  assert.equal(row('9. Meta de NPS e régua: Frequência')[3], 'Mensal: 2');
+  assert.equal(row('10. Régua de relacionamento')[3], 'Sim: 2');
+  assert.equal(row('12. Nota da rotina de relacionamento')[3], '–');
+  assert.ok(String(row('12. Nota da rotina de relacionamento')[4]).startsWith('=AVERAGE('));
 
-  const gargalo = row('15. ');
+  const gargalo = row('18. ');
   assert.deepEqual(gargalo.slice(1), ['Burocracia', 'Burocracia', '–', '–']);
 });
 
@@ -288,7 +293,7 @@ test('fórmulas não usam vírgula, que quebra em planilha pt-BR', () => {
 
 test('linha sem nenhum número não gera média com erro', () => {
   const { values } = L.buildConsolidado([tab('Ana'), tab('Bruno')]);
-  const volume = values.find((r) => r[0].startsWith('8. Cross-sell PJ: Volume'));
+  const volume = values.find((r) => r[0].startsWith('9. Cross-sell PJ: Volume'));
   assert.deepEqual(volume.slice(1), ['', '', '=SUM(B' + (values.indexOf(volume) + 1) + ':C' + (values.indexOf(volume) + 1) + ')', '–']);
 });
 
@@ -305,9 +310,9 @@ test('sem assessores não gera fórmula inválida', () => {
 
 test('texto vindo de aba editada é neutralizado no Consolidado', () => {
   const t = tab('Ana');
-  t.rows.find((r) => r[0].startsWith('15. '))[1] = '=1+1';
+  t.rows.find((r) => r[0].startsWith('18. '))[1] = '=1+1';
   const { values } = L.buildConsolidado([t]);
-  assert.equal(values.find((r) => r[0].startsWith('15. '))[1], "'=1+1");
+  assert.equal(values.find((r) => r[0].startsWith('18. '))[1], "'=1+1");
 });
 
 test('nome de assessor com fórmula é neutralizado no cabeçalho', () => {

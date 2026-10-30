@@ -32,7 +32,7 @@
       type: 'text',
       id: field.id,
       value: answers[field.id] || '',
-      inputmode: { money: 'decimal', percent: 'decimal', int: 'numeric', nps: 'numeric' }[field.type] || 'text',
+      inputmode: { money: 'decimal', percent: 'decimal', int: 'numeric', score: 'numeric' }[field.type] || 'text',
       autocomplete: field.type === 'name' ? 'name' : 'off',
       oninput: function () { answers[field.id] = input.value; },
     });
@@ -207,7 +207,7 @@
       root.appendChild(el('div', { class: 'kicker', text: 'GR Capital' }));
       var heading = el('h1', {}, [document.createTextNode('Planejamento '), el('span', { text: '2027' })]);
       root.appendChild(heading);
-      root.appendChild(el('p', { class: 'intro', text: 'Questionário de metas e planejamento individual dos assessores, em 4 blocos. Preencha tudo de uma vez: o rascunho não é salvo e cada assessor responde uma única vez.' }));
+      root.appendChild(el('p', { class: 'intro', text: 'Questionário de objetivos e planejamento individual dos assessores, em 4 blocos. Preencha tudo de uma vez: o rascunho não é salvo e cada assessor responde uma única vez.' }));
     } else {
       root.appendChild(el('div', { class: 'kicker', text: block.kicker }));
       root.appendChild(el('h1', { text: block.title.replace(/^Bloco \d+: /, '') }));

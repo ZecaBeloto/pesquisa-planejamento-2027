@@ -144,9 +144,9 @@ function validateField(field, answers) {
       return parseMoneyBR(value) === null ? 'Informe um valor em R$. Ex.: 25.000.000,00' : null;
     case 'int':
       return parseIntBR(value) === null ? 'Informe um número inteiro.' : null;
-    case 'nps': {
-      var nps = parseIntBR(value);
-      return nps === null || nps > 100 ? 'Informe um número de 0 a 100.' : null;
+    case 'score': {
+      var score = parseIntBR(value);
+      return score === null || score > field.max ? 'Informe um número inteiro de 0 a ' + field.max + '.' : null;
     }
     case 'percent': {
       var pct = parsePercentBR(value);
@@ -206,7 +206,7 @@ function sheetLines() {
         lines.push({
           block: block,
           label: label,
-          kind: { money: 'money', int: 'int', nps: 'avg', percent: 'percent', select: 'count', multi: 'count', longtext: 'text' }[field.type],
+          kind: { money: 'money', int: 'int', score: 'avg', percent: 'percent', select: 'count', multi: 'count', longtext: 'text' }[field.type],
           read: function (a) { return readField(field, a); },
         });
       });
@@ -220,7 +220,7 @@ function readField(field, answers) {
   switch (field.type) {
     case 'money': return parseMoneyBR(value);
     case 'int':
-    case 'nps': return parseIntBR(value);
+    case 'score': return parseIntBR(value);
     case 'percent': return parsePercentBR(value);
     case 'multi': {
       var parts = (value || []).slice();
