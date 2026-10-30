@@ -2,9 +2,9 @@
 // Execute setup() uma vez no editor para criar a planilha e o gatilho.
 var SPREADSHEET_NAME = 'Respostas | Planejamento 2027';
 var TIME_ZONE = 'America/Sao_Paulo';
-var NOTE = 'Gerado automaticamente. Corrija na aba do assessor: edições aqui são substituídas.';
-var FORMATS = { money: '"R$" #,##0.00', int: '0', percent: '0.00"%"', avg: '0.0', rank: '0.0' };
+var NOTE = 'Gerado automaticamente. Corrija na aba do assessor: edições aqui são substituídas. Em percentuais, digite só o número (40, não 40%).';
 var TAB_FORMATS = { money: '"R$" #,##0.00', int: '0', percent: '0.00"%"', avg: '0', rank: '0' };
+var AVERAGE_FORMATS = { money: '"R$" #,##0.00', int: '0.0', percent: '0.00"%"', avg: '0.0', rank: '0.0' };
 var NAVY = '#06152C';
 var GOLD = '#C8A84B';
 var LIGHT = '#E8EEF6';
@@ -48,13 +48,16 @@ function doPost(e) {
     var props = PropertiesService.getScriptProperties();
     var key = 'sub_' + payload.submissionId.slice(0, 64);
     var previous = props.getProperty(key);
-    if (previous) return respond({ ok: true, tab: previous });
-
-    var ss = getSpreadsheet();
-    var tabName = uniqueTabName(answers.nome, ss.getSheets().map(function (s) { return s.getName(); }));
-    writeAssessorTab(ss, tabName, answers);
-    props.setProperty(key, tabName);
+    var tabName = previous;
+    if (!tabName) {
+      var ss = getSpreadsheet();
+      tabName = uniqueTabName(answers.nome, ss.getSheets().map(function (s) { return s.getName(); }));
+      writeAssessorTab(ss, tabName, answers);
+      props.setProperty(key, tabName);
+    }
+    // No reenvio também reconstrói: a tentativa anterior pode ter falhado aqui.
     rebuildConsolidado();
+    SpreadsheetApp.flush();
     return respond({ ok: true, tab: tabName });
   } catch (err) {
     console.error(err);
@@ -68,7 +71,12 @@ function writeAssessorTab(ss, tabName, answers) {
   var submittedAt = Utilities.formatDate(new Date(), TIME_ZONE, 'dd/MM/yyyy HH:mm');
   var rows = buildTabRows(answers, submittedAt);
   var sheet = ss.insertSheet(tabName, Math.max(ss.getNumSheets() - 1, 0));
-  sheet.getRange(1, 1, rows.length, 3).setValues(rows).setVerticalAlignment('top');
+  try {
+    sheet.getRange(1, 1, rows.length, 3).setValues(rows).setVerticalAlignment('top');
+  } catch (err) {
+    ss.deleteSheet(sheet);
+    throw err;
+  }
   sheetLines().forEach(function (line, i) {
     if (TAB_FORMATS[line.kind]) sheet.getRange(i + 2, 2).setNumberFormat(TAB_FORMATS[line.kind]).setHorizontalAlignment('left');
   });
@@ -90,12 +98,16 @@ function rebuildConsolidado() {
   var values = built.values;
   var width = values[0].length;
 
+  if (target.getMaxColumns() < width) target.insertColumnsAfter(target.getMaxColumns(), width - target.getMaxColumns());
   target.clear();
   target.getRange(1, 1, values.length, width).setValues(values).setVerticalAlignment('top');
   built.rowKinds.forEach(function (kind, i) {
     var row = target.getRange(i + 1, 1, 1, width);
     if (kind === 'block') row.setBackground(LIGHT).setFontWeight('bold');
-    if (FORMATS[kind] && width > 1) target.getRange(i + 1, 2, 1, width - 1).setNumberFormat(FORMATS[kind]);
+    if (TAB_FORMATS[kind]) {
+      target.getRange(i + 1, 2, 1, width - 2).setNumberFormat(TAB_FORMATS[kind]);
+      target.getRange(i + 1, width).setNumberFormat(AVERAGE_FORMATS[kind]);
+    }
   });
   target.getRange(1, 1, 1, width).setBackground(NAVY).setFontColor(GOLD).setFontWeight('bold').setNote(NOTE);
   target.getRange(2, width - 1, values.length - 1, 2).setFontWeight('bold');
@@ -112,6 +124,7 @@ function onChangeHandler() {
   if (!lock.tryLock(30000)) return;
   try {
     rebuildConsolidado();
+    SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();
   }

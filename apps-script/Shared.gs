@@ -231,9 +231,9 @@ function parseMoneyBR(text) {
   if (isBlank(text) || typeof text !== 'string') return null;
   var s = text.replace(/R\$/i, '').replace(/\s/g, '');
   var normalized;
-  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s) || /^\d+(,\d+)?$/.test(s)) {
+  if (/^[1-9]\d{0,2}(\.\d{3})+(,\d+)?$/.test(s) || /^\d+(,\d+)?$/.test(s)) {
     normalized = s.replace(/\./g, '').replace(',', '.');
-  } else if (/^\d+\.\d+$/.test(s)) {
+  } else if (/^\d+\.\d{1,2}$/.test(s)) {
     normalized = s;
   } else {
     return null;
@@ -316,6 +316,7 @@ function validateField(field, answers) {
       for (var i = 0; i < field.options.length; i++) {
         var n = parsePercentBR(value[field.options[i].id]);
         if (n === null) return 'Preencha todos os percentuais. Use 0 quando não se aplicar.';
+        if (Math.abs(n * 100 - Math.round(n * 100)) > 1e-6) return 'Use no máximo duas casas decimais.';
         numbers.push(n);
       }
       return sumsTo100(numbers) ? null : 'A soma dos percentuais deve ser 100%.';
@@ -341,12 +342,14 @@ function validateField(field, answers) {
         return '"' + field.exclusive + '" não pode ser combinada com outras opções.';
       }
       var hasOther = field.other && otherText(answers, field) !== '';
+      if (hasOther && otherText(answers, field).length > MAX_TEXT) return 'Texto muito longo.';
       return required && selected.length === 0 && !hasOther ? 'Selecione ao menos uma opção.' : null;
     }
   }
 
   if (isBlank(value)) return required ? 'Campo obrigatório.' : null;
   if (typeof value !== 'string') return 'Resposta inválida.';
+  if (field.requiredIf && !required) return 'Marque ao menos uma opção acima ou apague este valor.';
 
   switch (field.type) {
     case 'money':

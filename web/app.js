@@ -2,8 +2,14 @@
   var screens = [IDENTIFICATION].concat(QUESTIONS);
   var answers = { nome: '' };
   var current = 0;
-  var submissionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now() + '-' + Math.random();
+  var SEND_TIMEOUT_MS = 90000;
+  var submissionId = newSubmissionId();
+  var lastSent = null;
   var root = document.getElementById('screen');
+
+  function newSubmissionId() {
+    return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now() + '-' + Math.random();
+  }
 
   function el(tag, attrs, children) {
     var node = document.createElement(tag);
@@ -253,10 +259,19 @@
     nextButton.textContent = 'Enviando...';
     message.textContent = '';
 
+    // Respostas alteradas depois de uma falha viram um novo envio; iguais reaproveitam o id.
+    var body = JSON.stringify(answers);
+    if (lastSent !== null && lastSent !== body) submissionId = newSubmissionId();
+    lastSent = body;
+
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, SEND_TIMEOUT_MS);
+
     fetch(WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ submissionId: submissionId, answers: answers }),
+      signal: controller.signal,
     })
       .then(function (r) { return r.json(); })
       .then(function (result) {
@@ -270,6 +285,7 @@
       });
 
     function fail(text) {
+      clearTimeout(timeout);
       nextButton.disabled = false;
       backButton.disabled = false;
       nextButton.textContent = 'Enviar';

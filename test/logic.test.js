@@ -39,6 +39,34 @@ test('parseMoneyBR entende o padrão brasileiro', () => {
   assert.equal(L.parseMoneyBR('-5'), null);
 });
 
+test('ponto ambíguo em moeda é recusado, não lido como decimal', () => {
+  assert.equal(L.parseMoneyBR('1000.000'), null);
+  assert.equal(L.parseMoneyBR('25.000000'), null);
+  assert.equal(L.parseMoneyBR('0.500'), null);
+  assert.equal(L.parseMoneyBR('350000.5'), 350000.5);
+  assert.equal(L.parseMoneyBR('1000.50'), 1000.5);
+});
+
+test('grupo de percentual recusa mais de duas casas decimais', () => {
+  const a = validAnswers();
+  a.q7 = { fee: '50,004', transacional: '50,004' };
+  assert.ok(L.validateBlock(blockOf('rentabilidade'), a).q7);
+  a.q7 = { fee: '33,333', transacional: '66,667' };
+  assert.ok(L.validateBlock(blockOf('rentabilidade'), a).q7);
+});
+
+test('pergunta 8: volume sem opção marcada é recusado', () => {
+  const a = validAnswers();
+  a.q8_volume = '5.000.000,00';
+  assert.ok(L.validateBlock(blockOf('rentabilidade'), a).q8_volume);
+});
+
+test('campo Outro tem limite de tamanho', () => {
+  const a = validAnswers();
+  a.q12_outro = 'x'.repeat(5001);
+  assert.ok(L.validateSubmission(a).q12);
+});
+
 test('parsePercentBR aceita vírgula, ponto e sufixos', () => {
   assert.equal(L.parsePercentBR('0,75%'), 0.75);
   assert.equal(L.parsePercentBR('0.75'), 0.75);
