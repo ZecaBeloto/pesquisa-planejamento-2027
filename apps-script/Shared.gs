@@ -262,6 +262,20 @@ function sumsTo100(values) {
   return cents === 10000;
 }
 
+function sumOfPercents(rawValues) {
+  var cents = 0;
+  rawValues.forEach(function (raw) {
+    var n = parsePercentBR(raw);
+    if (n !== null) cents += Math.round(n * 100);
+  });
+  return cents / 100;
+}
+
+function formatMoneyBR(value) {
+  var parts = value.toFixed(2).split('.');
+  return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + parts[1];
+}
+
 function sanitizeText(text) {
   var s = String(text).trim();
   return /^[=+\-@]/.test(s) ? "'" + s : s;
@@ -511,6 +525,8 @@ if (typeof module !== 'undefined') {
     parsePercentBR: parsePercentBR,
     parseIntBR: parseIntBR,
     sumsTo100: sumsTo100,
+    sumOfPercents: sumOfPercents,
+    formatMoneyBR: formatMoneyBR,
     sanitizeText: sanitizeText,
     uniqueTabName: uniqueTabName,
     validateBlock: validateBlock,

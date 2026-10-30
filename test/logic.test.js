@@ -46,6 +46,18 @@ test('parsePercentBR aceita vírgula, ponto e sufixos', () => {
   assert.equal(L.parsePercentBR('abc'), null);
 });
 
+test('formatMoneyBR formata no padrão brasileiro', () => {
+  assert.equal(L.formatMoneyBR(25000000), '25.000.000,00');
+  assert.equal(L.formatMoneyBR(350000.5), '350.000,50');
+  assert.equal(L.formatMoneyBR(0), '0,00');
+});
+
+test('sumOfPercents ignora vazios e arredonda em centésimos', () => {
+  assert.equal(L.sumOfPercents(['33,33', '33,33', '33,34', '']), 100);
+  assert.equal(L.sumOfPercents(['abc', '10']), 10);
+  assert.equal(L.sumOfPercents(['0,1', '0,2']), 0.3);
+});
+
 test('sumsTo100 não sofre com ponto flutuante', () => {
   assert.ok(L.sumsTo100([33.33, 33.33, 33.34]));
   assert.ok(L.sumsTo100([0.1, 0.2, 99.7]));
