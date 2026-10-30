@@ -67,7 +67,7 @@ function doPost(e) {
 function writeAssessorTab(ss, tabName, answers) {
   var submittedAt = Utilities.formatDate(new Date(), TIME_ZONE, 'dd/MM/yyyy HH:mm');
   var rows = buildTabRows(answers, submittedAt);
-  var sheet = ss.insertSheet(tabName);
+  var sheet = ss.insertSheet(tabName, Math.max(ss.getNumSheets() - 1, 0));
   sheet.getRange(1, 1, rows.length, 3).setValues(rows).setVerticalAlignment('top');
   sheetLines().forEach(function (line, i) {
     if (TAB_FORMATS[line.kind]) sheet.getRange(i + 2, 2).setNumberFormat(TAB_FORMATS[line.kind]).setHorizontalAlignment('left');

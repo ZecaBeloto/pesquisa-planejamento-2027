@@ -284,7 +284,8 @@ function buildConsolidado(tabs) {
     var total = NOT_APPLICABLE;
     var average = NOT_APPLICABLE;
     if (range && (line.kind === 'money' || line.kind === 'int')) total = '=SUM(' + range + ')';
-    if (range && ['money', 'int', 'percent', 'avg', 'rank'].indexOf(line.kind) !== -1) average = '=IFERROR(AVERAGE(' + range + '),"")';
+    var hasNumber = cells.some(function (cell) { return typeof cell === 'number'; });
+    if (hasNumber && ['money', 'int', 'percent', 'avg', 'rank'].indexOf(line.kind) !== -1) average = '=AVERAGE(' + range + ')';
     if (line.kind === 'count') total = countOptions(cells);
     values.push([line.label].concat(cells, [total, average]));
     rowKinds.push(line.kind);

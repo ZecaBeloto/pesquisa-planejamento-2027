@@ -207,15 +207,15 @@ test('buildConsolidado monta o modelo A', () => {
   assert.deepEqual(r1.slice(1, 3), [25000000, 10]);
   const n = values.indexOf(r1) + 1;
   assert.equal(r1[3], `=SUM(B${n}:C${n})`);
-  assert.equal(r1[4], `=IFERROR(AVERAGE(B${n}:C${n}),"")`);
+  assert.equal(r1[4], `=AVERAGE(B${n}:C${n})`);
 
   const roa = row('5. ');
   assert.equal(roa[3], '–');
-  assert.ok(String(roa[4]).startsWith('=IFERROR(AVERAGE'));
+  assert.ok(String(roa[4]).startsWith('=AVERAGE('));
 
   const rank = row('6. Prioridade de alocação: Renda Fixa');
   assert.equal(rank[3], '–');
-  assert.ok(String(rank[4]).startsWith('=IFERROR(AVERAGE'));
+  assert.ok(String(rank[4]).startsWith('=AVERAGE('));
 
   const cert = row('13. ');
   assert.equal(cert[3], 'CEA: 2; CFP®: 1');
@@ -239,6 +239,17 @@ test('valor corrigido para texto não quebra as demais colunas', () => {
   t.rows.find((r) => r[0].startsWith('1. '))[1] = 'a confirmar';
   const { values } = L.buildConsolidado([t, tab('Bruno')]);
   assert.deepEqual(values.find((r) => r[0].startsWith('1. ')).slice(1, 3), ['a confirmar', 25000000]);
+});
+
+test('fórmulas não usam vírgula, que quebra em planilha pt-BR', () => {
+  const { values } = L.buildConsolidado([tab('Ana'), tab('Bruno')]);
+  values.flat().filter((v) => String(v).startsWith('=')).forEach((f) => assert.ok(!f.includes(','), f));
+});
+
+test('linha sem nenhum número não gera média com erro', () => {
+  const { values } = L.buildConsolidado([tab('Ana'), tab('Bruno')]);
+  const volume = values.find((r) => r[0].startsWith('8. Cross-sell PJ: Volume'));
+  assert.deepEqual(volume.slice(1), ['', '', '=SUM(B' + (values.indexOf(volume) + 1) + ':C' + (values.indexOf(volume) + 1) + ')', '–']);
 });
 
 test('aba não relacionada é ignorada', () => {
