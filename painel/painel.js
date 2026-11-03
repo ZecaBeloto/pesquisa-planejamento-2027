@@ -209,7 +209,8 @@
       return;
     }
     if (state.view === TEAM) renderTeam(root, summarize(state.assessors));
-    else renderAssessor(root, assessorView(state.assessors, state.view));
+    else renderAssessor(root, assessorView(state.assessors, state.view), state.view);
+    mountCharts(root, charts);
   }
 
   // Componentes
@@ -230,9 +231,17 @@
     var box = el('div', { class: 'chart-box' }, [canvas]);
     box.style.height = height + 'px';
     config.options = Object.assign({ responsive: true, maintainAspectRatio: false, animation: false }, config.options || {});
-    // O gráfico só pode ser criado depois que o canvas estiver na página.
-    setTimeout(function () { if (canvas.isConnected) charts.push(new Chart(canvas, config)); }, 0);
+    // O gráfico só pode ser criado depois que o canvas estiver na página: ver mountCharts.
+    canvas.chartConfig = config;
     return box;
+  }
+
+  function mountCharts(root, registry) {
+    root.querySelectorAll('canvas').forEach(function (canvas) {
+      if (!canvas.chartConfig) return;
+      registry.push(new Chart(canvas, canvas.chartConfig));
+      canvas.chartConfig = null;
+    });
   }
 
   // Quebra rótulos longos em linhas, para não serem cortados no eixo.
@@ -396,10 +405,9 @@
     return el('div', { class: 'chips' }, selected.map(function (x) { return el('span', { class: 'chip', text: x.label }); }));
   }
 
-  function renderAssessor(root, view) {
+  function renderAssessor(root, view, name) {
     var own = view.own;
     var team = view.team;
-    var name = state.view;
     var mine = function (list) { return list.length ? list[0].value : null; };
     root.appendChild(el('div', { class: 'kpis' }, [
       kpi('Captação', money(own.kpis.captacao), 'Média da equipe: ' + money(teamAverage(team.byAssessor.captacao))),
@@ -429,7 +437,222 @@
     root.appendChild(openAnswers(own.open, false));
   }
 
+  // Relatórios em PDF: cada bloco da tela vira uma imagem, distribuída em páginas A4.
+  var PAGE = { width: 210, height: 297, margin: 12, top: 24, bottom: 284 };
+  var logoData = null;
+
+  function loadLogo() {
+    if (logoData) return Promise.resolve(logoData);
+    return fetch('../web/logo.png')
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        return new Promise(function (resolve) {
+          var reader = new FileReader();
+          reader.onload = function () { logoData = reader.result; resolve(logoData); };
+          reader.readAsDataURL(blob);
+        });
+      });
+  }
+
+  function reportHeading(title, subtitle) {
+    return el('div', { class: 'report-heading' }, [
+      el('div', { class: 'kicker', text: 'Planejamento 2027' }),
+      el('h1', { text: title }),
+      subtitle ? el('p', { class: 'muted', text: subtitle }) : null,
+    ]);
+  }
+
+  function answersSection(assessor) {
+    return el('div', { class: 'report-answers' }, [el('h2', { text: 'Todas as respostas' })].concat(answerRows(assessor).map(function (row) {
+      return el('div', { class: 'card' }, [el('h3', { text: row.title })].concat(row.items.map(function (item) {
+        return el('div', { class: 'answer-item' }, [
+          item.label ? el('div', { class: 'answer-label', text: item.label }) : null,
+          el('div', { class: 'open-text', text: item.value }),
+        ]);
+      })));
+    })));
+  }
+
+  // Divide o conteúdo em blocos que não devem ser cortados: grades viram linhas de dois cartões.
+  function reportBlocks(container) {
+    var blocks = [];
+    Array.prototype.slice.call(container.children).forEach(function (child) {
+      if (child.classList.contains('grid')) {
+        var cards = Array.prototype.slice.call(child.children);
+        for (var i = 0; i < cards.length; i += 2) {
+          var row = el('div', { class: 'grid' });
+          container.insertBefore(row, child);
+          row.appendChild(cards[i]);
+          if (cards[i + 1]) row.appendChild(cards[i + 1]);
+          blocks.push(row);
+        }
+        child.remove();
+      } else if (child.classList.contains('open') || child.classList.contains('report-answers')) {
+        Array.prototype.slice.call(child.children).forEach(function (part) { blocks.push(part); });
+      } else {
+        blocks.push(child);
+      }
+    });
+    return blocks;
+  }
+
+  // Monta uma seção (Consolidado ou um assessor) fora da tela, com tema claro, e devolve as imagens dos blocos.
+  function captureSection(build) {
+    var container = el('div', { class: 'report' });
+    document.body.appendChild(container);
+    var reportCharts = [];
+    var color = Chart.defaults.color;
+    var border = Chart.defaults.borderColor;
+    var blocks;
+    Chart.defaults.color = '#33415c';
+    Chart.defaults.borderColor = 'rgba(6, 21, 44, .12)';
+    try {
+      build(container);
+      blocks = reportBlocks(container);
+      mountCharts(container, reportCharts);
+    } finally {
+      Chart.defaults.color = color;
+      Chart.defaults.borderColor = border;
+    }
+    return blocks.reduce(function (chain, block) {
+      return chain.then(function (images) {
+        return html2canvas(block, { scale: 1.5, backgroundColor: '#ffffff', logging: false }).then(function (canvas) {
+          images.push(canvas);
+          return images;
+        });
+      });
+    }, Promise.resolve([])).finally(function () {
+      reportCharts.forEach(function (c) { c.destroy(); });
+      container.remove();
+    });
+  }
+
+  function addSection(doc, title, images, first) {
+    var titles = doc.sectionTitles || (doc.sectionTitles = []);
+    var newPage = function () { doc.addPage(); titles[doc.getNumberOfPages()] = title; };
+    if (first) titles[1] = title;
+    else newPage();
+    var width = PAGE.width - PAGE.margin * 2;
+    var room = PAGE.bottom - PAGE.top;
+    var y = PAGE.top;
+    images.forEach(function (canvas) {
+      var height = canvas.height * width / canvas.width;
+      if (height <= room) {
+        if (y + height > PAGE.bottom) { newPage(); y = PAGE.top; }
+        doc.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', PAGE.margin, y, width, height);
+        y += height + 4;
+        return;
+      }
+      // Bloco maior que uma página: corta a imagem em fatias.
+      var pxPerMm = canvas.width / width;
+      for (var offset = 0; offset < canvas.height;) {
+        if (y > PAGE.top) { newPage(); y = PAGE.top; }
+        var slicePx = Math.min(canvas.height - offset, Math.floor(room * pxPerMm));
+        var slice = document.createElement('canvas');
+        slice.width = canvas.width;
+        slice.height = slicePx;
+        slice.getContext('2d').drawImage(canvas, 0, offset, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+        doc.addImage(slice.toDataURL('image/jpeg', 0.8), 'JPEG', PAGE.margin, y, width, slicePx / pxPerMm);
+        y += slicePx / pxPerMm + 4;
+        offset += slicePx;
+      }
+    });
+  }
+
+  function decorate(doc, logo) {
+    var total = doc.getNumberOfPages();
+    var titles = doc.sectionTitles || [];
+    var title = '';
+    var now = dateTime(new Date().toISOString());
+    for (var page = 1; page <= total; page++) {
+      doc.setPage(page);
+      title = titles[page] || title;
+      doc.setFillColor(6, 21, 44);
+      doc.rect(0, 0, PAGE.width, 16, 'F');
+      doc.addImage(logo, 'PNG', PAGE.margin, 3.5, 30, 9);
+      doc.setTextColor(200, 168, 75);
+      doc.setFontSize(10);
+      doc.text(title, PAGE.width - PAGE.margin, 10, { align: 'right' });
+      doc.setTextColor(110, 120, 140);
+      doc.setFontSize(8);
+      doc.text('Planejamento 2027 · GR Capital · gerado em ' + now, PAGE.margin, 291);
+      doc.text('página ' + page + ' de ' + total, PAGE.width - PAGE.margin, 291, { align: 'right' });
+    }
+  }
+
+  function newDoc() {
+    return new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  }
+
+  function teamSection(doc, assessors, first) {
+    return captureSection(function (root) {
+      root.appendChild(reportHeading('Consolidado', assessors.length + (assessors.length === 1 ? ' assessor' : ' assessores')));
+      renderTeam(root, summarize(assessors));
+    }).then(function (images) { addSection(doc, 'Consolidado', images, first); });
+  }
+
+  function assessorSection(doc, assessors, assessor, first) {
+    return captureSection(function (root) {
+      root.appendChild(reportHeading(assessor.name, 'Resposta enviada em ' + dateTime(assessor.submittedAt)));
+      renderAssessor(root, assessorView(assessors, assessor.name), assessor.name);
+      root.appendChild(answersSection(assessor));
+    }).then(function (images) { addSection(doc, assessor.name, images, first); });
+  }
+
+  function download(blob, fileName) {
+    var link = el('a', { href: URL.createObjectURL(blob), download: fileName });
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(function () { URL.revokeObjectURL(link.href); link.remove(); }, 1000);
+  }
+
+  function runExport(button, task) {
+    var buttons = [$('pdf-zip'), $('pdf-full')];
+    var label = button.textContent;
+    var assessors = state.assessors;
+    if (!assessors || !assessors.length) { $('status').textContent = 'Ainda não há respostas para exportar.'; return; }
+    buttons.forEach(function (b) { b.disabled = true; });
+    loadLogo()
+      .then(function (logo) { return task(assessors, logo, function (text) { button.textContent = text; }); })
+      .catch(function () { renderStatus(); $('status').textContent += ' · não foi possível gerar o PDF'; })
+      .finally(function () {
+        button.textContent = label;
+        buttons.forEach(function (b) { b.disabled = false; });
+      });
+  }
+
+  function exportZip(assessors, logo, progress) {
+    var zip = new JSZip();
+    var names = pdfFileNames(assessors.map(function (a) { return a.name; }));
+    return assessors.reduce(function (chain, assessor, i) {
+      return chain.then(function () {
+        progress('Gerando ' + (i + 1) + ' de ' + assessors.length + '...');
+        var doc = newDoc();
+        return assessorSection(doc, assessors, assessor, true).then(function () {
+          decorate(doc, logo);
+          zip.file(names[i], doc.output('blob'));
+        });
+      });
+    }, Promise.resolve())
+      .then(function () { progress('Compactando...'); return zip.generateAsync({ type: 'blob' }); })
+      .then(function (blob) { download(blob, 'Planejamento2027_Assessores.zip'); });
+  }
+
+  function exportFull(assessors, logo, progress) {
+    var doc = newDoc();
+    progress('Gerando consolidado...');
+    return assessors.reduce(function (chain, assessor, i) {
+      return chain.then(function () {
+        progress('Gerando ' + (i + 1) + ' de ' + assessors.length + '...');
+        return assessorSection(doc, assessors, assessor, false);
+      });
+    }, teamSection(doc, assessors, true))
+      .then(function () { decorate(doc, logo); download(doc.output('blob'), 'Planejamento2027_Relatorio_completo.pdf'); });
+  }
+
   // Eventos
+  $('pdf-zip').addEventListener('click', function () { runExport($('pdf-zip'), exportZip); });
+  $('pdf-full').addEventListener('click', function () { runExport($('pdf-full'), exportFull); });
   $('login-form').addEventListener('submit', login);
   $('logout').addEventListener('click', function () { logout(''); });
   $('refresh').addEventListener('click', load);

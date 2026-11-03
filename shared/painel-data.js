@@ -2,6 +2,7 @@
 if (typeof module !== 'undefined') {
   var _logic = require('./logic.js');
   var sheetLines = _logic.sheetLines;
+  var formatMoneyBR = _logic.formatMoneyBR;
   var QUESTIONS = require('./questions.js').QUESTIONS;
 }
 
@@ -155,10 +156,50 @@ function summarize(assessors) {
   };
 }
 
+var EMPTY = '–';
+
+function formatAnswer(kind, value) {
+  if (value === undefined || value === null || value === '') return EMPTY;
+  if (typeof value !== 'number') return String(value);
+  var plain = String(Number(value.toFixed(2))).replace('.', ',');
+  if (kind === 'money') return 'R$ ' + formatMoneyBR(value);
+  if (kind === 'percent') return plain + '%';
+  if (kind === 'rank') return plain + 'º';
+  return plain;
+}
+
+// Todas as respostas de um assessor, na ordem do formulário, para o PDF.
+function answerRows(assessor) {
+  var lines = sheetLines();
+  var rows = [];
+  QUESTIONS.forEach(function (block) {
+    block.questions.forEach(function (question) {
+      var items = lines.filter(function (line) { return line.n === question.n; }).map(function (line) {
+        var field = findField(line.fieldId);
+        var label = line.optionId ? optionLabel(line.fieldId, line.optionId) : (field.label || '');
+        return { label: label, value: formatAnswer(line.kind, assessor.answers[line.label]) };
+      });
+      rows.push({ title: question.n + '. ' + question.text, items: items });
+    });
+  });
+  return rows;
+}
+
+function pdfFileNames(names) {
+  var taken = {};
+  return names.map(function (name) {
+    var base = String(name).replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim() || 'assessor';
+    var candidate = base;
+    for (var i = 2; taken[candidate.toLowerCase()]; i++) candidate = base + ' (' + i + ')';
+    taken[candidate.toLowerCase()] = true;
+    return 'Planejamento2027_' + candidate + '.pdf';
+  });
+}
+
 function assessorView(assessors, name) {
   var own = assessors.filter(function (a) { return a.name === name; });
   if (!own.length) return null;
   return { own: summarize(own), team: summarize(assessors) };
 }
 
-if (typeof module !== 'undefined') module.exports = { summarize: summarize, assessorView: assessorView };
+if (typeof module !== 'undefined') module.exports = { summarize: summarize, assessorView: assessorView, answerRows: answerRows, pdfFileNames: pdfFileNames };

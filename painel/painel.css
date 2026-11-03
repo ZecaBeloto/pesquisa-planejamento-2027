@@ -83,3 +83,20 @@ td.num, th.num { text-align: right; white-space: nowrap; }
   .grid { grid-template-columns: minmax(0, 1fr); }
   select { min-width: 0; flex: 1 1 100%; }
 }
+
+/* Relatório em PDF: montado fora da tela, com tema claro e largura de uma página A4. */
+.report {
+  --text: #06152C;
+  --muted: #5a6478;
+  --line: rgba(6, 21, 44, .14);
+  --card: #f6f7f9;
+  position: absolute; left: -10000px; top: 0; width: 794px;
+  background: #fff; color: var(--text); padding: 0 4px;
+}
+.report .grid { margin-top: 0; padding-bottom: 2px; }
+.report .chip { color: #7a5c12; border-color: #C8A84B; }
+.report .open-name { color: #8a6d1f; }
+.report-heading { padding: 4px 0 8px; }
+.report h2 { margin: 6px 0 0; }
+.answer-item { padding: 4px 0; }
+.answer-label { font-size: 12px; color: var(--muted); }

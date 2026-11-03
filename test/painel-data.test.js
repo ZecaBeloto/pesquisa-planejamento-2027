@@ -140,3 +140,38 @@ test('opção corrigida à mão com outra grafia ainda é contada', () => {
   const s = P.summarize(L.readAssessors(t));
   assert.deepEqual(s.counts.regua, [{ label: 'Sim', count: 1 }, { label: 'Não', count: 1 }, { label: 'Outros valores', count: 1 }]);
 });
+
+test('answerRows lista todas as respostas pergunta por pergunta, formatadas', () => {
+  const [ana] = L.readAssessors([tab('Ana', { q12_outro: 'Treinamento', q1: '25.000.000,00' })]);
+  const rows = P.answerRows(ana);
+  assert.equal(rows.length, 18);
+  assert.equal(rows[0].title, '1. Qual é o seu objetivo de Captação Líquida total para 2027?');
+  assert.deepEqual(rows[0].items, [{ label: '', value: 'R$ 25.000.000,00' }]);
+  assert.deepEqual(rows[1].items.map((i) => i.label), ['Objetivo de contas', 'Ticket médio (R$)']);
+  assert.deepEqual(rows[2].items.map((i) => i.value), ['40%', '30%', '30%']);
+  assert.equal(rows[5].items[0].value, '0,75%');
+  assert.equal(rows[6].items[0].value, '1º');
+  assert.equal(rows[14].items[0].value, 'Ferramentas de CRM / automação de follow-up; Outro: Treinamento');
+  assert.equal(rows[17].items[0].value, 'Burocracia');
+});
+
+test('answerRows mostra traço para resposta vazia e mantém texto editado à mão', () => {
+  const t = tab('Ana');
+  t.rows.find((r) => r[0].startsWith('1. '))[1] = 'a confirmar';
+  const [ana] = L.readAssessors([t]);
+  const rows = P.answerRows(ana);
+  assert.equal(rows[0].items[0].value, 'a confirmar');
+  assert.equal(rows[8].items.find((i) => i.label.startsWith('Volume')).value, 'R$ 1.000.000,00');
+  const [semPj] = L.readAssessors([tab('Bia', { q8: [], q8_volume: '' })]);
+  assert.deepEqual(P.answerRows(semPj)[8].items.map((i) => i.value), ['–', '–']);
+});
+
+test('pdfFileNames gera nomes de arquivo seguros e distintos', () => {
+  assert.deepEqual(P.pdfFileNames(['Ana Souza', 'Ana/Souza', 'José: "Zé"', '  ', 'ana souza']), [
+    'Planejamento2027_Ana Souza.pdf',
+    'Planejamento2027_Ana-Souza.pdf',
+    'Planejamento2027_José- -Zé-.pdf',
+    'Planejamento2027_assessor.pdf',
+    'Planejamento2027_ana souza (2).pdf',
+  ]);
+});
