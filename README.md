@@ -31,6 +31,7 @@ Na planilha "Respostas | Planejamento 2027": **Arquivo > Fazer download > Micros
 
 Endereço: `https://zecabeloto.github.io/pesquisa-planejamento-2027/painel/`. Os dados só saem da planilha com a senha.
 
-- **Cadastrar ou trocar a senha:** no Apps Script, abra **Configurações do projeto > Propriedades do script** e crie ou edite `PAINEL_SENHA`, com no mínimo 12 caracteres. Não precisa reimplantar.
+- **Cadastrar ou trocar a senha:** no Apps Script, abra **Configurações do projeto > Propriedades do script** e crie ou edite `PAINEL_SENHA`. Use uma senha aleatória, de preferência gerada por um gerenciador de senhas, com no mínimo 12 caracteres; evite palavras como "planejamento". Não precisa reimplantar.
+- **Tentativas erradas:** depois de 20 erros, a leitura fica bloqueada por 10 minutos para qualquer pessoa, inclusive com a senha certa.
 - **Sair:** o navegador lembra a senha até você clicar em **Sair**. Ao trocar a senha, o painel volta para a tela de entrada.
 - O painel lê as abas dos assessores e se atualiza a cada 60 segundos.

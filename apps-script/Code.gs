@@ -6,6 +6,9 @@ var NOTE = 'Gerado automaticamente. Corrija na aba do assessor: edições aqui s
 var TAB_FORMATS = { money: '"R$" #,##0.00', int: '0', percent: '0.00"%"', avg: '0', rank: '0' };
 var AVERAGE_FORMATS = { money: '"R$" #,##0.00', int: '0.0', percent: '0.00"%"', avg: '0.0', rank: '0.0' };
 var MIN_PANEL_PASSWORD = 12;
+var MAX_PANEL_FAILURES = 20;
+var PANEL_LOCKOUT_SECONDS = 600;
+var PANEL_FAILURES_KEY = 'painel_falhas';
 var NAVY = '#06152C';
 var GOLD = '#C8A84B';
 var LIGHT = '#E8EEF6';
@@ -70,10 +73,15 @@ function doPost(e) {
 }
 
 // Leitura do painel: só com a senha cadastrada em PAINEL_SENHA (mínimo de 12 caracteres).
+// Erros somam um contador global; acima do limite, a leitura fica bloqueada por alguns minutos,
+// sem esperar, para não ocupar o script de que o formulário precisa.
 function readPanel(senha) {
+  var cache = CacheService.getScriptCache();
+  var failures = Number(cache.get(PANEL_FAILURES_KEY) || 0);
+  if (failures >= MAX_PANEL_FAILURES) return { ok: false, error: 'bloqueado' };
   var expected = PropertiesService.getScriptProperties().getProperty('PAINEL_SENHA');
   if (!expected || expected.length < MIN_PANEL_PASSWORD || typeof senha !== 'string' || senha !== expected) {
-    Utilities.sleep(1000);
+    cache.put(PANEL_FAILURES_KEY, String(failures + 1), PANEL_LOCKOUT_SECONDS);
     return { ok: false, error: 'senha' };
   }
   var tabs = getSpreadsheet().getSheets()

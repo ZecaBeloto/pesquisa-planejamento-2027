@@ -125,3 +125,18 @@ test('assessorView compara o assessor com a equipe', () => {
   assert.equal(v.team.count, 3);
   assert.equal(P.assessorView(list, 'Inexistente'), null);
 });
+
+test('média de novas contas ignora valores não numéricos, como o Consolidado', () => {
+  const t = tabs();
+  t[0].rows.find((r) => r[0].startsWith('2. Abertura de contas: Objetivo')).splice(1, 1, 'a definir');
+  const s = P.summarize(L.readAssessors(t));
+  assert.deepEqual(s.byAssessor.contas.map((x) => x.value), [24, 24]);
+});
+
+test('opção corrigida à mão com outra grafia ainda é contada', () => {
+  const t = tabs();
+  t[0].rows.find((r) => r[0].startsWith('10. '))[1] = ' sim ';
+  t[1].rows.find((r) => r[0].startsWith('10. '))[1] = 'Talvez';
+  const s = P.summarize(L.readAssessors(t));
+  assert.deepEqual(s.counts.regua, [{ label: 'Sim', count: 1 }, { label: 'Não', count: 1 }, { label: 'Outros valores', count: 1 }]);
+});

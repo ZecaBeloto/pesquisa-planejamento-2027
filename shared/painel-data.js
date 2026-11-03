@@ -6,6 +6,11 @@ if (typeof module !== 'undefined') {
 }
 
 var OTHER = 'Outro';
+var UNKNOWN = 'Outros valores';
+
+function normalize(text) {
+  return String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
 
 function isNumber(value) {
   return typeof value === 'number' && isFinite(value);
@@ -56,8 +61,9 @@ function optionLabel(fieldId, optionId) {
 function countOf(assessors, fieldId) {
   var field = findField(fieldId);
   var line = findLine(fieldId);
-  var counts = field.options.map(function (option) { return { label: option, count: 0 }; });
+  var counts = field.options.map(function (option) { return { label: option, count: 0, key: normalize(option) }; });
   var other = { label: OTHER, count: 0 };
+  var unknown = { label: UNKNOWN, count: 0 };
   assessors.forEach(function (a) {
     var cell = a.answers[line.label];
     if (cell === undefined || cell === null || cell === '') return;
@@ -70,10 +76,15 @@ function countOf(assessors, fieldId) {
         seenOther = true;
         return;
       }
-      counts.forEach(function (c) { if (c.label === item) c.count++; });
+      // Valores corrigidos à mão com outra grafia ainda contam; os desconhecidos vão para "Outros valores".
+      var match = counts.filter(function (c) { return c.key === normalize(item); })[0];
+      if (match) match.count++;
+      else unknown.count++;
     });
   });
+  counts = counts.map(function (c) { return { label: c.label, count: c.count }; });
   if (field.other) counts.push(other);
+  if (unknown.count) counts.push(unknown);
   return counts
     .map(function (c, i) { return { c: c, i: i }; })
     .sort(function (x, y) { return y.c.count - x.c.count || x.i - y.i; })
@@ -129,7 +140,7 @@ function summarize(assessors) {
       roa: averageOf(assessors, findLine('q5')),
       auc: sumOf(assessors, 'q4_meta'),
     },
-    byAssessor: { captacao: byName('q1'), auc: byName('q4_meta'), nota: byName('q_regua_nota'), churn: byName('q10') },
+    byAssessor: { captacao: byName('q1'), contas: byName('q2_contas'), auc: byName('q4_meta'), nota: byName('q_regua_nota'), churn: byName('q10') },
     stacked: { origem: stacked('q3'), receita: stacked('q7') },
     rank: stacked('q6')
       .map(function (x, i) { return { x: x, i: i }; })

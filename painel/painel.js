@@ -56,6 +56,12 @@
     return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
+  function refusal(result) {
+    if (result.error === 'senha') return 'Senha incorreta.';
+    if (result.error === 'bloqueado') return 'Muitas tentativas erradas. Aguarde 10 minutos e tente de novo.';
+    return 'Não foi possível carregar os dados.';
+  }
+
   // Comunicação
   function request(senha) {
     var controller = new AbortController();
@@ -75,6 +81,7 @@
     $('refresh').disabled = true;
     request(senha)
       .then(function (result) {
+        if (!storedPassword()) return;
         if (result.ok) {
           state.assessors = result.assessors;
           state.fetchedAt = new Date().toISOString();
@@ -82,6 +89,8 @@
           render();
         } else if (result.error === 'senha') {
           logout('Senha incorreta ou alterada. Entre novamente.');
+        } else if (result.error === 'bloqueado') {
+          logout(refusal(result));
         } else {
           state.failed = true;
           renderStatus();
@@ -122,6 +131,9 @@
     stopTimer();
     state.assessors = null;
     destroyCharts();
+    $('dashboard').innerHTML = '';
+    $('view').innerHTML = '';
+    $('status').textContent = '';
     showLogin(message);
   }
 
@@ -134,7 +146,7 @@
     request(senha)
       .then(function (result) {
         if (!result.ok) {
-          $('login-error').textContent = result.error === 'senha' ? 'Senha incorreta.' : 'Não foi possível carregar os dados.';
+          $('login-error').textContent = refusal(result);
           return;
         }
         storePassword(senha);
@@ -296,7 +308,7 @@
       options: {
         indexAxis: 'y',
         plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: function (c) { return c.dataset.fullLabel + ': ' + percent(c.parsed.x); } } } },
-        scales: { x: { stacked: true, min: 0, max: 100, ticks: { callback: function (v) { return v + '%'; } } }, y: categoryAxis({ stacked: true }) },
+        scales: { x: { stacked: true, min: 0, suggestedMax: 100, ticks: { callback: function (v) { return v + '%'; } } }, y: categoryAxis({ stacked: true }) },
       },
     });
   }
@@ -391,7 +403,7 @@
     var mine = function (list) { return list.length ? list[0].value : null; };
     root.appendChild(el('div', { class: 'kpis' }, [
       kpi('Captação', money(own.kpis.captacao), 'Média da equipe: ' + money(teamAverage(team.byAssessor.captacao))),
-      kpi('Novas contas', number(own.kpis.contas), 'Média da equipe: ' + number(team.kpis.contas === null ? null : team.kpis.contas / team.count, 1)),
+      kpi('Novas contas', number(own.kpis.contas), 'Média da equipe: ' + number(teamAverage(team.byAssessor.contas), 1)),
       kpi('ROA', percent(own.kpis.roa), 'Média da equipe: ' + percent(team.kpis.roa)),
       kpi('Objetivo de AuC', money(own.kpis.auc), 'Média da equipe: ' + money(teamAverage(team.byAssessor.auc))),
       kpi('Nota da rotina', number(mine(own.byAssessor.nota), 0), 'Média da equipe: ' + number(teamAverage(team.byAssessor.nota), 1)),
@@ -430,7 +442,8 @@
     $('dashboard').appendChild(el('div', { class: 'notice', text: 'Carregando respostas...' }));
     request(storedPassword())
       .then(function (result) {
-        if (!result.ok) return logout(result.error === 'senha' ? 'Senha incorreta ou alterada. Entre novamente.' : 'Não foi possível carregar os dados.');
+        if (result.error === 'senha') return logout('Senha incorreta ou alterada. Entre novamente.');
+        if (!result.ok) return showLogin(refusal(result));
         state.assessors = result.assessors;
         state.fetchedAt = new Date().toISOString();
         enterDashboard();

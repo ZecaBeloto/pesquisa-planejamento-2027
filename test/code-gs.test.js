@@ -61,11 +61,13 @@ function world(sheetCount = 0) {
     getNumSheets: () => sheets.length,
   };
   const props = { SPREADSHEET_ID: 'x' };
+  const cache = {};
   const context = {
     console: { error: () => {} },
     JSON, Math, Date, Object, Array, String, Number,
     SpreadsheetApp: { openById: () => ss, flush: () => log.push('flush') },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) },
+    CacheService: { getScriptCache: () => ({ get: (k) => (k in cache ? cache[k] : null), put: (k, v) => { cache[k] = String(v); } }) },
     LockService: { getScriptLock: () => ({ waitLock: () => log.push('lock'), tryLock: () => true, releaseLock: () => log.push('release') }) },
     Utilities: { formatDate: () => '30/10/2026 10:00', sleep: (ms) => log.push('sleep:' + ms) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (t) => ({ setMimeType: () => JSON.parse(t) }) },
@@ -175,13 +177,27 @@ test('painel devolve as abas dos assessores com a senha certa', () => {
   assert.equal(r.assessors[0].answers['1. Captação Líquida 2027 (R$)'], 10);
 });
 
-test('painel recusa senha errada e atrasa a resposta', () => {
+test('painel recusa senha errada sem ocupar o script', () => {
   const w = world();
   w.props.PAINEL_SENHA = SENHA;
   post(w, 'a', answers('Ana'));
   const r = painel(w, 'errada');
   assert.deepEqual(r, { ok: false, error: 'senha' });
-  assert.ok(w.log.includes('sleep:1000'));
+  assert.ok(!w.log.some((x) => x.startsWith('sleep')));
+});
+
+test('muitas tentativas erradas bloqueiam a leitura por um tempo', () => {
+  const w = world();
+  w.props.PAINEL_SENHA = SENHA;
+  for (let i = 0; i < 20; i++) painel(w, 'errada-' + i);
+  assert.deepEqual(painel(w, SENHA), { ok: false, error: 'bloqueado' });
+});
+
+test('poucas tentativas erradas não bloqueiam a senha certa', () => {
+  const w = world();
+  w.props.PAINEL_SENHA = SENHA;
+  for (let i = 0; i < 5; i++) painel(w, 'errada-' + i);
+  assert.equal(painel(w, SENHA).ok, true);
 });
 
 test('painel sem senha cadastrada ou curta recusa sempre', () => {
