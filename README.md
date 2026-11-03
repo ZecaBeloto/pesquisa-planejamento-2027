@@ -26,3 +26,11 @@ Na planilha "Respostas | Planejamento 2027": **Arquivo > Fazer download > Micros
 2. Execute `setup` uma vez e autorize. O log mostra o link da planilha.
 3. Implante como App da Web: executar como você, acesso "Qualquer pessoa".
 4. Coloque a URL em `web/config.js`.
+
+## Painel de respostas
+
+Endereço: `https://zecabeloto.github.io/pesquisa-planejamento-2027/painel/`. Os dados só saem da planilha com a senha.
+
+- **Cadastrar ou trocar a senha:** no Apps Script, abra **Configurações do projeto > Propriedades do script** e crie ou edite `PAINEL_SENHA`, com no mínimo 12 caracteres. Não precisa reimplantar.
+- **Sair:** o navegador lembra a senha até você clicar em **Sair**. Ao trocar a senha, o painel volta para a tela de entrada.
+- O painel lê as abas dos assessores e se atualiza a cada 60 segundos.

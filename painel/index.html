@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Painel 2027 | GR Capital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="painel.css">
+</head>
+<body>
+  <header class="top">
+    <img class="logo" src="../web/logo.png" alt="GR Capital">
+    <div class="controls" id="controls" hidden>
+      <label class="sr-only" for="view">Visão</label>
+      <select id="view"></select>
+      <button type="button" class="ghost" id="refresh">Atualizar</button>
+      <button type="button" class="ghost" id="logout">Sair</button>
+    </div>
+  </header>
+  <div class="status" id="status" hidden></div>
+
+  <main id="login" class="login" hidden>
+    <div class="kicker">GR Capital</div>
+    <h1>Painel <span>2027</span></h1>
+    <p class="muted">Acompanhamento das respostas do Planejamento 2027.</p>
+    <form id="login-form" autocomplete="on">
+      <label class="field-label" for="senha">Senha</label>
+      <input type="password" id="senha" autocomplete="current-password" required>
+      <div class="error" id="login-error" role="alert"></div>
+      <button type="submit" class="primary" id="enter">Entrar</button>
+    </form>
+  </main>
+
+  <main id="dashboard" class="dashboard" hidden></main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="../shared/questions.js"></script>
+  <script src="../shared/logic.js"></script>
+  <script src="../shared/painel-data.js"></script>
+  <script src="../web/config.js"></script>
+  <script src="painel.js"></script>
+</body>
+</html>
