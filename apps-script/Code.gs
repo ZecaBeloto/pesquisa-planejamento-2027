@@ -5,6 +5,7 @@ var TIME_ZONE = 'America/Sao_Paulo';
 var NOTE = 'Gerado automaticamente. Corrija na aba do assessor: edições aqui são substituídas. Em percentuais, digite só o número (40, não 40%).';
 var TAB_FORMATS = { money: '"R$" #,##0.00', int: '0', percent: '0.00"%"', avg: '0', rank: '0' };
 var AVERAGE_FORMATS = { money: '"R$" #,##0.00', int: '0.0', percent: '0.00"%"', avg: '0.0', rank: '0.0' };
+var MIN_PANEL_PASSWORD = 12;
 var NAVY = '#06152C';
 var GOLD = '#C8A84B';
 var LIGHT = '#E8EEF6';
@@ -37,6 +38,7 @@ function doPost(e) {
   var lock = LockService.getScriptLock();
   try {
     var payload = JSON.parse(e.postData.contents);
+    if (payload.action === 'painel') return respond(readPanel(payload.senha));
     var answers = payload.answers;
     if (!answers || typeof answers !== 'object' || typeof payload.submissionId !== 'string' || !payload.submissionId) {
       return respond({ ok: false, errors: { _: 'Envio inválido.' } });
@@ -65,6 +67,19 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Leitura do painel: só com a senha cadastrada em PAINEL_SENHA (mínimo de 12 caracteres).
+function readPanel(senha) {
+  var expected = PropertiesService.getScriptProperties().getProperty('PAINEL_SENHA');
+  if (!expected || expected.length < MIN_PANEL_PASSWORD || typeof senha !== 'string' || senha !== expected) {
+    Utilities.sleep(1000);
+    return { ok: false, error: 'senha' };
+  }
+  var tabs = getSpreadsheet().getSheets()
+    .filter(function (s) { return s.getName() !== CONSOLIDADO; })
+    .map(function (s) { return { name: s.getName(), rows: s.getDataRange().getValues() }; });
+  return { ok: true, assessors: readAssessors(tabs) };
 }
 
 function writeAssessorTab(ss, tabName, answers) {

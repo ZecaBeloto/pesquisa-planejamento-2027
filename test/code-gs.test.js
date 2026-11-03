@@ -67,12 +67,12 @@ function world(sheetCount = 0) {
     SpreadsheetApp: { openById: () => ss, flush: () => log.push('flush') },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) },
     LockService: { getScriptLock: () => ({ waitLock: () => log.push('lock'), tryLock: () => true, releaseLock: () => log.push('release') }) },
-    Utilities: { formatDate: () => '30/10/2026 10:00' },
+    Utilities: { formatDate: () => '30/10/2026 10:00', sleep: (ms) => log.push('sleep:' + ms) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (t) => ({ setMimeType: () => JSON.parse(t) }) },
   };
   vm.createContext(context);
   vm.runInContext(source, context);
-  return { context, ss, sheets, log, formats, failNext };
+  return { context, ss, sheets, log, formats, failNext, props };
 }
 
 const answers = (nome) => ({
@@ -160,4 +160,48 @@ test('Média de inteiros mostra decimal, sem arredondar', () => {
   const width = c.rows[0].length;
   const f = w.formats.filter((x) => x.sheet === 'Consolidado' && x.r === rowOf).slice(-2);
   assert.deepEqual(f.map((x) => [x.c, x.nc, x.f]), [[2, width - 2, '0'], [width, 1, '0.0']]);
+});
+
+const SENHA = 'senha-forte-123';
+const painel = (w, senha, extra = {}) => w.context.doPost(Object.assign({ postData: { contents: JSON.stringify({ action: 'painel', senha }) } }, extra));
+
+test('painel devolve as abas dos assessores com a senha certa', () => {
+  const w = world();
+  w.props.PAINEL_SENHA = SENHA;
+  post(w, 'a', answers('Ana'));
+  const r = painel(w, SENHA);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.assessors.map((a) => a.name), ['Ana']);
+  assert.equal(r.assessors[0].answers['1. Captação Líquida 2027 (R$)'], 10);
+});
+
+test('painel recusa senha errada e atrasa a resposta', () => {
+  const w = world();
+  w.props.PAINEL_SENHA = SENHA;
+  post(w, 'a', answers('Ana'));
+  const r = painel(w, 'errada');
+  assert.deepEqual(r, { ok: false, error: 'senha' });
+  assert.ok(w.log.includes('sleep:1000'));
+});
+
+test('painel sem senha cadastrada ou curta recusa sempre', () => {
+  const w = world();
+  assert.deepEqual(painel(w, ''), { ok: false, error: 'senha' });
+  assert.deepEqual(painel(w, undefined), { ok: false, error: 'senha' });
+  w.props.PAINEL_SENHA = 'curta';
+  assert.deepEqual(painel(w, 'curta'), { ok: false, error: 'senha' });
+});
+
+test('senha na URL é ignorada', () => {
+  const w = world();
+  w.props.PAINEL_SENHA = SENHA;
+  const r = w.context.doPost({ parameter: { senha: SENHA }, postData: { contents: JSON.stringify({ action: 'painel' }) } });
+  assert.deepEqual(r, { ok: false, error: 'senha' });
+});
+
+test('leitura do painel não grava nada', () => {
+  const w = world();
+  w.props.PAINEL_SENHA = SENHA;
+  painel(w, SENHA);
+  assert.ok(!w.log.some((x) => x.startsWith('write:')));
 });
