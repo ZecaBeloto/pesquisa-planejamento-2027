@@ -418,6 +418,9 @@ function sheetLines() {
           field.options.forEach(function (option) {
             lines.push({
               block: block,
+              n: question.n,
+              fieldId: field.id,
+              optionId: option.id,
               label: prefix + ': ' + option.label,
               kind: field.type === 'rank' ? 'rank' : 'percent',
               read: function (a) {
@@ -431,6 +434,9 @@ function sheetLines() {
         var label = field.label ? prefix + ': ' + field.label : prefix;
         lines.push({
           block: block,
+          n: question.n,
+          fieldId: field.id,
+          optionId: null,
           label: label,
           kind: { money: 'money', int: 'int', score: 'avg', percent: 'percent', select: 'count', multi: 'count', longtext: 'text' }[field.type],
           read: function (a) { return readField(field, a); },
@@ -465,6 +471,27 @@ function buildTabRows(answers, submittedAt) {
     rows.push([line.label, value === null ? '' : value, submittedAt]);
   });
   return rows;
+}
+
+function parseSubmittedAt(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]') return isNaN(value.getTime()) ? null : value.toISOString();
+  var m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/.exec(String(value).trim());
+  if (!m) return null;
+  return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5])).toISOString();
+}
+
+// Converte as abas em respostas por pergunta, como o Consolidado as lê.
+function readAssessors(tabs) {
+  return tabs.filter(function (tab) { return isAssessorTab(tab.rows); }).map(function (tab) {
+    var answers = {};
+    var latest = null;
+    tab.rows.slice(1).forEach(function (row) {
+      answers[row[0]] = row[1];
+      var at = parseSubmittedAt(row[2]);
+      if (at && (!latest || at > latest)) latest = at;
+    });
+    return { name: tab.name, submittedAt: latest, answers: answers };
+  });
 }
 
 function isAssessorTab(rows) {
@@ -551,6 +578,9 @@ if (typeof module !== 'undefined') {
     buildTabRows: buildTabRows,
     buildConsolidado: buildConsolidado,
     isAssessorTab: isAssessorTab,
+    sheetLines: sheetLines,
+    parseSubmittedAt: parseSubmittedAt,
+    readAssessors: readAssessors,
     columnLetter: columnLetter,
     CONSOLIDADO: CONSOLIDADO,
   };
