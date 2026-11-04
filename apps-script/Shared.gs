@@ -152,7 +152,7 @@ var QUESTIONS = [
         n: 12,
         short: 'Nota da rotina de relacionamento',
         text: 'Por fim, de 0 a 10, quanto você avalia que está cumprindo essa rotina de relacionamento atualmente?',
-        fields: [{ id: 'q_regua_nota', type: 'score', max: 10, required: true, hint: 'De 0 a 10' }],
+        fields: [{ id: 'q_regua_nota', type: 'score', max: 10, required: true, hint: 'De 0 a 10, com até uma casa decimal. Ex.: 7,5' }],
       },
       {
         n: 13,
@@ -270,6 +270,18 @@ function parseIntBR(text) {
   return Number(s);
 }
 
+// Nota com até uma casa decimal, aceitando vírgula ou ponto: "7,5", "7.5" ou "8".
+function parseScoreBR(text) {
+  if (isBlank(text) || typeof text !== 'string') return null;
+  var s = text.trim();
+  if (!/^\d{1,3}([.,]\d)?$/.test(s)) return null;
+  return Number(s.replace(',', '.'));
+}
+
+function formatScoreBR(value) {
+  return value.toFixed(1).replace('.', ',');
+}
+
 function sumsTo100(values) {
   var cents = 0;
   for (var i = 0; i < values.length; i++) cents += Math.round(values[i] * 100);
@@ -371,8 +383,8 @@ function validateField(field, answers) {
     case 'int':
       return parseIntBR(value) === null ? 'Informe um número inteiro.' : null;
     case 'score': {
-      var score = parseIntBR(value);
-      return score === null || score > field.max ? 'Informe um número inteiro de 0 a ' + field.max + '.' : null;
+      var score = parseScoreBR(value);
+      return score === null || score > field.max ? 'Informe uma nota de 0 a ' + field.max + ', com até uma casa decimal. Ex.: 7,5' : null;
     }
     case 'percent': {
       var pct = parsePercentBR(value);
@@ -452,7 +464,7 @@ function readField(field, answers) {
   switch (field.type) {
     case 'money': return parseMoneyBR(value);
     case 'int':
-    case 'score': return parseIntBR(value);
+    case 'score': return parseScoreBR(value);
     case 'percent': return parsePercentBR(value);
     case 'multi': {
       var parts = (value || []).slice();
@@ -568,6 +580,8 @@ if (typeof module !== 'undefined') {
     parseMoneyBR: parseMoneyBR,
     parsePercentBR: parsePercentBR,
     parseIntBR: parseIntBR,
+    parseScoreBR: parseScoreBR,
+    formatScoreBR: formatScoreBR,
     sumsTo100: sumsTo100,
     sumOfPercents: sumOfPercents,
     formatMoneyBR: formatMoneyBR,

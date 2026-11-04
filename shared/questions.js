@@ -152,7 +152,7 @@ var QUESTIONS = [
         n: 12,
         short: 'Nota da rotina de relacionamento',
         text: 'Por fim, de 0 a 10, quanto você avalia que está cumprindo essa rotina de relacionamento atualmente?',
-        fields: [{ id: 'q_regua_nota', type: 'score', max: 10, required: true, hint: 'De 0 a 10' }],
+        fields: [{ id: 'q_regua_nota', type: 'score', max: 10, required: true, hint: 'De 0 a 10, com até uma casa decimal. Ex.: 7,5' }],
       },
       {
         n: 13,

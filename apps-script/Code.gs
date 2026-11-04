@@ -3,7 +3,7 @@
 var SPREADSHEET_NAME = 'Respostas | Planejamento 2027';
 var TIME_ZONE = 'America/Sao_Paulo';
 var NOTE = 'Gerado automaticamente. Corrija na aba do assessor: edições aqui são substituídas. Em percentuais, digite só o número (40, não 40%).';
-var TAB_FORMATS = { money: '"R$" #,##0.00', int: '0', percent: '0.00"%"', avg: '0', rank: '0' };
+var TAB_FORMATS = { money: '"R$" #,##0.00', int: '0', percent: '0.00"%"', avg: '0.0', rank: '0' };
 var AVERAGE_FORMATS = { money: '"R$" #,##0.00', int: '0.0', percent: '0.00"%"', avg: '0.0', rank: '0.0' };
 var MIN_PANEL_PASSWORD = 12;
 var MAX_PANEL_FAILURES = 20;

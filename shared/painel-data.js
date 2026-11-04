@@ -3,6 +3,7 @@ if (typeof module !== 'undefined') {
   var _logic = require('./logic.js');
   var sheetLines = _logic.sheetLines;
   var formatMoneyBR = _logic.formatMoneyBR;
+  var formatScoreBR = _logic.formatScoreBR;
   var QUESTIONS = require('./questions.js').QUESTIONS;
 }
 
@@ -165,6 +166,7 @@ function formatAnswer(kind, value) {
   if (kind === 'money') return 'R$ ' + formatMoneyBR(value);
   if (kind === 'percent') return plain + '%';
   if (kind === 'rank') return plain + 'º';
+  if (kind === 'avg') return formatScoreBR(value);
   return plain;
 }
 

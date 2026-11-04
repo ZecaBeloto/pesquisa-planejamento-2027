@@ -32,7 +32,7 @@
       type: 'text',
       id: field.id,
       value: answers[field.id] || '',
-      inputmode: { money: 'decimal', percent: 'decimal', int: 'numeric', score: 'numeric' }[field.type] || 'text',
+      inputmode: { money: 'decimal', percent: 'decimal', int: 'numeric', score: 'decimal' }[field.type] || 'text',
       autocomplete: field.type === 'name' ? 'name' : 'off',
       oninput: function () { answers[field.id] = input.value; },
     });
@@ -40,6 +40,12 @@
       input.addEventListener('blur', function () {
         var n = parseMoneyBR(input.value);
         if (n !== null) { input.value = formatMoneyBR(n); answers[field.id] = input.value; }
+      });
+    }
+    if (field.type === 'score') {
+      input.addEventListener('blur', function () {
+        var n = parseScoreBR(input.value);
+        if (n !== null) { input.value = formatScoreBR(n); answers[field.id] = input.value; }
       });
     }
     return input;

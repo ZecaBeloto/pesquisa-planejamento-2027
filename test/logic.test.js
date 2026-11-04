@@ -319,3 +319,38 @@ test('nome de assessor com fórmula é neutralizado no cabeçalho', () => {
   const { values } = L.buildConsolidado([tab('=Ana')]);
   assert.equal(values[0][1], "'=Ana");
 });
+
+test('nota da régua aceita uma casa decimal com vírgula ou ponto', () => {
+  assert.equal(L.parseScoreBR('7,5'), 7.5);
+  assert.equal(L.parseScoreBR('7.5'), 7.5);
+  assert.equal(L.parseScoreBR(' 8 '), 8);
+  assert.equal(L.parseScoreBR('10,0'), 10);
+  assert.equal(L.parseScoreBR('7,55'), null);
+  assert.equal(L.parseScoreBR('7,'), null);
+  assert.equal(L.parseScoreBR('-1'), null);
+  assert.equal(L.parseScoreBR('abc'), null);
+});
+
+test('nota da régua valida de 0 a 10 com até uma casa decimal', () => {
+  const a = validAnswers();
+  const check = (v) => L.validateBlock(blockOf('qualidade'), Object.assign(a, { q_regua_nota: v })).q_regua_nota;
+  assert.equal(check('7,5'), undefined);
+  assert.equal(check('7.5'), undefined);
+  assert.equal(check('0'), undefined);
+  assert.equal(check('10'), undefined);
+  assert.ok(check('10,5'));
+  assert.ok(check('7,25'));
+});
+
+test('nota da régua é gravada como número decimal', () => {
+  const get = (v) => L.buildTabRows(Object.assign(validAnswers(), { q_regua_nota: v }), 'd').find((r) => r[0].startsWith('12. '))[1];
+  assert.strictEqual(get('7,5'), 7.5);
+  assert.strictEqual(get('7.5'), 7.5);
+  assert.strictEqual(get('8'), 8);
+});
+
+test('formatScoreBR sempre mostra uma casa decimal com vírgula', () => {
+  assert.equal(L.formatScoreBR(7.5), '7,5');
+  assert.equal(L.formatScoreBR(8), '8,0');
+  assert.equal(L.formatScoreBR(10), '10,0');
+});

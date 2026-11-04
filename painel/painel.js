@@ -414,7 +414,7 @@
       kpi('Novas contas', number(own.kpis.contas), 'Média da equipe: ' + number(teamAverage(team.byAssessor.contas), 1)),
       kpi('ROA', percent(own.kpis.roa), 'Média da equipe: ' + percent(team.kpis.roa)),
       kpi('Objetivo de AuC', money(own.kpis.auc), 'Média da equipe: ' + money(teamAverage(team.byAssessor.auc))),
-      kpi('Nota da rotina', number(mine(own.byAssessor.nota), 0), 'Média da equipe: ' + number(teamAverage(team.byAssessor.nota), 1)),
+      kpi('Nota da rotina', number(mine(own.byAssessor.nota), 1), 'Média da equipe: ' + number(teamAverage(team.byAssessor.nota), 1)),
       kpi('Teto de churn', percent(mine(own.byAssessor.churn)), 'Média da equipe: ' + percent(teamAverage(team.byAssessor.churn))),
     ]));
     root.appendChild(el('div', { class: 'grid' }, [

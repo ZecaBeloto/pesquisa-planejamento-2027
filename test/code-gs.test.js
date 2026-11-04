@@ -221,3 +221,15 @@ test('leitura do painel não grava nada', () => {
   painel(w, SENHA);
   assert.ok(!w.log.some((x) => x.startsWith('write:')));
 });
+
+test('nota da régua usa formato com uma casa decimal na aba e no Consolidado', () => {
+  const w = world();
+  post(w, 'a', Object.assign(answers('Ana'), { q_regua_nota: '7,5' }));
+  const tabRow = w.ss.getSheetByName('Ana').rows.findIndex((r) => String(r[0]).startsWith('12. ')) + 1;
+  assert.ok(w.formats.some((f) => f.sheet === 'Ana' && f.r === tabRow && f.f === '0.0'));
+  const c = w.ss.getSheetByName('Consolidado');
+  const row = c.rows.findIndex((r) => String(r[0]).startsWith('12. ')) + 1;
+  const width = c.rows[0].length;
+  const f = w.formats.filter((x) => x.sheet === 'Consolidado' && x.r === row).slice(-2);
+  assert.deepEqual(f.map((x) => [x.c, x.nc, x.f]), [[2, width - 2, '0.0'], [width, 1, '0.0']]);
+});

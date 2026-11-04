@@ -175,3 +175,10 @@ test('pdfFileNames gera nomes de arquivo seguros e distintos', () => {
     'Planejamento2027_ana souza (2).pdf',
   ]);
 });
+
+test('answerRows mostra a nota da régua com uma casa decimal', () => {
+  const [ana] = L.readAssessors([tab('Ana', { q_regua_nota: '7.5' })]);
+  assert.equal(P.answerRows(ana)[11].items[0].value, '7,5');
+  const [bruno] = L.readAssessors([tab('Bruno', { q_regua_nota: '8' })]);
+  assert.equal(P.answerRows(bruno)[11].items[0].value, '8,0');
+});
