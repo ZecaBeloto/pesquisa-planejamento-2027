@@ -405,9 +405,17 @@
     return el('div', { class: 'chips' }, selected.map(function (x) { return el('span', { class: 'chip', text: x.label }); }));
   }
 
-  function renderAssessor(root, view, name) {
+  // reserved: PDF individual, que pode ser entregue ao assessor. Os gráficos por assessor
+  // mostram só ele e a média da equipe, sem os valores dos colegas.
+  function renderAssessor(root, view, name, reserved) {
     var own = view.own;
     var team = view.team;
+    var compareSeries = function (list) {
+      if (!reserved) return list;
+      var mineOnly = list.filter(function (x) { return x.name === name; });
+      var avg = teamAverage(list);
+      return mineOnly.concat(avg === null ? [] : [{ name: 'Média da equipe', value: avg }]);
+    };
     var mine = function (list) { return list.length ? list[0].value : null; };
     root.appendChild(el('div', { class: 'kpis' }, [
       kpi('Captação', money(own.kpis.captacao), 'Média da equipe: ' + money(teamAverage(team.byAssessor.captacao))),
@@ -418,8 +426,8 @@
       kpi('Teto de churn', percent(mine(own.byAssessor.churn)), 'Média da equipe: ' + percent(teamAverage(team.byAssessor.churn))),
     ]));
     root.appendChild(el('div', { class: 'grid' }, [
-      card('Captação comparada à equipe', horizontalBars(team.byAssessor.captacao, money, name)),
-      card('Objetivo de AuC comparado à equipe', horizontalBars(team.byAssessor.auc, money, name)),
+      card('Captação comparada à equipe', horizontalBars(compareSeries(team.byAssessor.captacao), money, name)),
+      card('Objetivo de AuC comparado à equipe', horizontalBars(compareSeries(team.byAssessor.auc), money, name)),
       card('Origem da captação e modelo de receita', el('div', {}, [
         stackedBars([{ label: 'Origem: assessor', parts: own.stacked.origem }, { label: 'Origem: equipe', parts: team.stacked.origem }]),
         stackedBars([{ label: 'Receita: assessor', parts: own.stacked.receita }, { label: 'Receita: equipe', parts: team.stacked.receita }]),
@@ -591,10 +599,10 @@
     }).then(function (images) { addSection(doc, 'Consolidado', images, first); });
   }
 
-  function assessorSection(doc, assessors, assessor, first) {
+  function assessorSection(doc, assessors, assessor, first, reserved) {
     return captureSection(function (root) {
       root.appendChild(reportHeading(assessor.name, 'Resposta enviada em ' + dateTime(assessor.submittedAt)));
-      renderAssessor(root, assessorView(assessors, assessor.name), assessor.name);
+      renderAssessor(root, assessorView(assessors, assessor.name), assessor.name, reserved);
       root.appendChild(answersSection(assessor));
     }).then(function (images) { addSection(doc, assessor.name, images, first); });
   }
@@ -628,7 +636,7 @@
       return chain.then(function () {
         progress('Gerando ' + (i + 1) + ' de ' + assessors.length + '...');
         var doc = newDoc();
-        return assessorSection(doc, assessors, assessor, true).then(function () {
+        return assessorSection(doc, assessors, assessor, true, true).then(function () {
           decorate(doc, logo);
           zip.file(names[i], doc.output('blob'));
         });
