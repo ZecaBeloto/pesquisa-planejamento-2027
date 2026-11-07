@@ -182,3 +182,29 @@ test('answerRows mostra a nota da régua com uma casa decimal', () => {
   const [bruno] = L.readAssessors([tab('Bruno', { q_regua_nota: '8' })]);
   assert.equal(P.answerRows(bruno)[11].items[0].value, '8,0');
 });
+
+test('chunkSizes divide linhas pelo espaço de cada página, sem partir uma linha', () => {
+  assert.deepEqual(P.chunkSizes(50, 10, 30), [10, 30, 10]);
+  assert.deepEqual(P.chunkSizes(8, 10, 30), [8]);
+  assert.deepEqual(P.chunkSizes(30, 0, 30), [0, 30]);
+  assert.deepEqual(P.chunkSizes(0, 10, 30), []);
+});
+
+test('highlights resume a equipe em frases para a capa', () => {
+  const s = P.summarize(L.readAssessors(tabs()));
+  const h = P.highlights(s);
+  assert.deepEqual(h, [
+    '2 de 3 assessores têm régua de relacionamento definida.',
+    'Renda Fixa / Crédito Privado é a classe de ativos com maior prioridade média.',
+    'CEA é a certificação mais planejada, citada por 3 assessores.',
+    '3 assessores identificaram potencial de cross-sell PJ, somando R$ 3.000.000,00.',
+  ]);
+});
+
+test('highlights omite frases sem dados', () => {
+  const t = tabs().map((x, i) => ({ name: x.name, rows: L.buildTabRows(Object.assign(base(), { q8: [], q8_volume: '', q13: ['Nenhuma / Já certificado'] }), 'd') }));
+  const h = P.highlights(P.summarize(L.readAssessors(t)));
+  assert.ok(!h.some((x) => /certificação/.test(x)));
+  assert.ok(!h.some((x) => /cross-sell/.test(x)));
+  assert.deepEqual(P.highlights(P.summarize([])), []);
+});

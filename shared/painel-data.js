@@ -198,10 +198,48 @@ function pdfFileNames(names) {
   });
 }
 
+// Quantas linhas de um gráfico cabem em cada página: a primeira parte usa o espaço que sobra,
+// as seguintes usam a página inteira. Nenhuma linha é partida entre páginas.
+function chunkSizes(total, firstCapacity, capacity) {
+  var sizes = [];
+  var left = total;
+  var room = firstCapacity;
+  while (left > 0) {
+    var size = Math.min(left, room);
+    sizes.push(size);
+    left -= size;
+    room = capacity;
+  }
+  return sizes;
+}
+
+function withoutParentheses(text) {
+  return String(text).replace(/\s*\([^)]*\)\s*$/, '');
+}
+
+// Frases da capa do relatório gerencial; cada uma só aparece quando há dados para ela.
+function highlights(summary) {
+  var lines = [];
+  if (!summary.count) return lines;
+  var regua = summary.counts.regua.filter(function (c) { return c.label === 'Sim'; })[0];
+  var answeredRegua = summary.counts.regua.reduce(function (s, c) { return s + c.count; }, 0);
+  if (answeredRegua) lines.push(regua.count + ' de ' + answeredRegua + ' assessores têm régua de relacionamento definida.');
+  if (summary.rank.length && summary.rank[0].avg !== null) {
+    lines.push(withoutParentheses(summary.rank[0].label) + ' é a classe de ativos com maior prioridade média.');
+  }
+  var cert = summary.counts.certificacoes.filter(function (c) { return c.count > 0 && c.label !== 'Nenhuma / Já certificado' && c.label !== UNKNOWN; })[0];
+  if (cert) lines.push(cert.label + ' é a certificação mais planejada, citada por ' + cert.count + (cert.count === 1 ? ' assessor.' : ' assessores.'));
+  var volume = summary.outros.filter(function (o) { return o.label.indexOf('9.') === 0; })[0];
+  if (volume && volume.values.length) {
+    lines.push(volume.values.length + (volume.values.length === 1 ? ' assessor identificou' : ' assessores identificaram') + ' potencial de cross-sell PJ, somando R$ ' + formatMoneyBR(volume.total) + '.');
+  }
+  return lines;
+}
+
 function assessorView(assessors, name) {
   var own = assessors.filter(function (a) { return a.name === name; });
   if (!own.length) return null;
   return { own: summarize(own), team: summarize(assessors) };
 }
 
-if (typeof module !== 'undefined') module.exports = { summarize: summarize, assessorView: assessorView, answerRows: answerRows, pdfFileNames: pdfFileNames };
+if (typeof module !== 'undefined') module.exports = { summarize: summarize, assessorView: assessorView, answerRows: answerRows, pdfFileNames: pdfFileNames, chunkSizes: chunkSizes, highlights: highlights };
