@@ -1077,13 +1077,14 @@
     w.y += teamRankHeight + 4;
 
     w.heading('Produtos, relacionamento e capacitação', 60);
-    var countHeight = function (list) { return Math.max(26, list.length * 8 + 14); };
+    // Altura pela linha mais alta: rótulos longos quebram em até 3 linhas e sobrepunham o vizinho.
+    var countHeight = function (list) { return Math.max(26, rowHeightMm(list, list.length) * list.length + 16); };
     w.chartPair(
       { title: 'Cross-sell PJ', box: horizontalBars(s.counts.crossSell, number), height: countHeight(s.counts.crossSell) },
       { title: 'Régua de relacionamento definida', box: horizontalBars(s.counts.regua, number), height: countHeight(s.counts.regua) }
     );
     w.chartPair(
-      { title: 'Materiais de apoio da mesa', box: horizontalBars(s.counts.apoio, number), height: countHeight(s.counts.apoio) + 6 },
+      { title: 'Materiais de apoio da mesa', box: horizontalBars(s.counts.apoio, number), height: countHeight(s.counts.apoio) },
       { title: 'Certificações planejadas', box: horizontalBars(s.counts.certificacoes, number), height: countHeight(s.counts.certificacoes) }
     );
     w.barsByAssessor('Nota da rotina de relacionamento (0 a 10)', s.byAssessor.nota, function (v) { return number(v, 1); }, teamAverage(s.byAssessor.nota));
